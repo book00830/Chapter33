@@ -73,4 +73,53 @@ class UserTest < ActiveSupport::TestCase
     michael.unfollow(archer)
     assert_not michael.following?(archer)
   end
-end
+
+
+  test "should follow a user the standard way" do
+     assert_difference '@user.following.count', 1 do
+       post relationships_path, params: { followed_id: @other.id }
+     end
+   end
+
+   test "should follow a user with Ajax" do
+     assert_difference '@user.following.count', 1 do
+       post relationships_path, xhr: true, params: { followed_id: @other.id }
+     end
+   end
+
+   test "should unfollow a user the standard way" do
+     @user.follow(@other)
+     relationship = @user.active_relationships.find_by(followed_id: @other.id)
+     assert_difference '@user.following.count', -1 do
+       delete relationship_path(relationship)
+     end
+   end
+
+   test "should unfollow a user with Ajax" do
+     @user.follow(@other)
+     relationship = @user.active_relationships.find_by(followed_id: @other.id)
+     assert_difference '@user.following.count', -1 do
+       delete relationship_path(relationship), xhr: true
+     end
+   end
+
+
+
+   test "feed should have the right posts" do
+     michael = users(:michael)
+     archer  = users(:archer)
+     lana    = users(:lana)
+     # Posts from followed user
+     lana.microposts.each do |post_following|
+       assert michael.feed.include?(post_following)
+     end
+     # Posts from self
+     michael.microposts.each do |post_self|
+       assert michael.feed.include?(post_self)
+     end
+     # Posts from unfollowed user
+     archer.microposts.each do |post_unfollowed|
+       assert_not michael.feed.include?(post_unfollowed)
+     end
+   end
+ end
